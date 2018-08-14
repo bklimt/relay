@@ -7,15 +7,11 @@ import (
 	"log"
 	"net/http"
 
+	"cloud.google.com/go/firestore"
 	"golang.org/x/net/context"
 
 	firebase "firebase.google.com/go"
-
-	"google.golang.org/api/option"
 )
-
-// TODO(klimt): Set account default credentials.
-const serviceKey = "/home/bklimt/Downloads/home-d09a0-firebase-adminsdk-ofkx1-beb0122e5d.json"
 
 func Serve(port uint16, app *firebase.App) {
 	http.HandleFunc("/log", func(w http.ResponseWriter, r *http.Request) {
@@ -34,15 +30,17 @@ func Serve(port uint16, app *firebase.App) {
 			return
 		}
 
-		firestore, err := app.Firestore(r.Context())
+		data["timestamp"] = firestore.ServerTimestamp
+
+		client, err := app.Firestore(r.Context())
 		if err != nil {
 			w.WriteHeader(http.StatusInternalServerError)
 			fmt.Fprintf(w, "unable to initialize firestore: %s", err)
 			return
 		}
-		defer firestore.Close()
+		defer client.Close()
 
-		_, _, err = firestore.Collection("log").Add(r.Context(), data)
+		_, _, err = client.Collection("log").Add(r.Context(), data)
 		if err != nil {
 			w.WriteHeader(http.StatusInternalServerError)
 			fmt.Fprintf(w, "unable to write to firestore: %s", err)
@@ -59,8 +57,9 @@ func Serve(port uint16, app *firebase.App) {
 }
 
 func InitFirebase() *firebase.App {
-	opt := option.WithCredentialsFile(serviceKey)
-	app, err := firebase.NewApp(context.Background(), nil, opt)
+	ctx := context.Background()
+	cfg := &firebase.Config{ProjectID: "home-d09a0"}
+	app, err := firebase.NewApp(ctx, cfg)
 	if err != nil {
 		log.Fatalf("error initializing firebase: %s", err)
 	}
