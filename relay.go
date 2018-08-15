@@ -6,6 +6,7 @@ import (
 	"io/ioutil"
 	"log"
 	"net/http"
+	"time"
 
 	"cloud.google.com/go/firestore"
 	"golang.org/x/net/context"
@@ -30,6 +31,7 @@ func Serve(port uint16, app *firebase.App) {
 			return
 		}
 
+		key := time.Now().UTC().Format(time.RFC3339)
 		data["timestamp"] = firestore.ServerTimestamp
 
 		client, err := app.Firestore(r.Context())
@@ -40,7 +42,7 @@ func Serve(port uint16, app *firebase.App) {
 		}
 		defer client.Close()
 
-		_, _, err = client.Collection("log").Add(r.Context(), data)
+		_, err = client.Collection("log").Doc(key).Set(r.Context(), data)
 		if err != nil {
 			w.WriteHeader(http.StatusInternalServerError)
 			fmt.Fprintf(w, "unable to write to firestore: %s", err)
