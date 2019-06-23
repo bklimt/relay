@@ -8,9 +8,10 @@ import (
 )
 
 type Config struct {
-	ClientID     string `json:"clientId"`     // The Nest client ID.
-	ClientSecret string `json:"clientSecret"` // The Nest client secret.
-	ProjectID    string `json:"projectId"`    // The Firebase project ID.
+	ClientID               string `json:"clientId"`               // The Nest client ID.
+	ClientSecret           string `json:"clientSecret"`           // The Nest client secret.
+	ProjectID              string `json:"projectId"`              // The Firebase project ID.
+	CheckupIntervalSeconds int    `json:"checkupIntervalSeconds"` // How long to wait between checkups.
 }
 
 func LoadConfig() *Config {
@@ -28,6 +29,10 @@ func LoadConfig() *Config {
 	err = json.Unmarshal(data, &cfg)
 	if err != nil {
 		log.Fatalf("error parsing config %q: %s", data, err)
+	}
+
+	if cfg.CheckupIntervalSeconds == 0 {
+		cfg.CheckupIntervalSeconds = 3600
 	}
 
 	return cfg

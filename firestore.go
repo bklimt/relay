@@ -98,13 +98,50 @@ func LogNestData(ctx context.Context, app *firebase.App, key string, data *nest.
 			name = id
 		}
 		therm["timestamp"] = firestore.ServerTimestamp
-		_, err = fs.Collection("device").Doc(name).Collection("log").Doc(key).Set(ctx, therm)
+
+		// Log the data for the device itself.
+		_, err = fs.Collection("device").Doc(name).Set(ctx, therm)
 		if err != nil {
 			return common.Errorf(http.StatusInternalServerError, "unable to write to thermostat data to firestore: %s", err)
+		}
+
+		// Log the data to the running log.
+		_, err = fs.Collection("device").Doc(name).Collection("log").Doc(key).Set(ctx, therm)
+		if err != nil {
+			return common.Errorf(http.StatusInternalServerError, "unable to write to thermostat log to firestore: %s", err)
 		}
 	}
 
 	return nil
+}
+
+// Returns a map of device name to timestamp.
+func GetMostRecentDeviceTimestamps(ctx context.Context, app *firebase.App) (map[string]time.Time, error) {
+	fs, err := app.Firestore(ctx)
+	if err != nil {
+		return nil, common.Errorf(http.StatusInternalServerError, "unable to initialize firestore: %s", err)
+	}
+	defer fs.Close()
+
+	// Get the list of devices.
+	devices, err := fs.Collection("device").Documents(ctx).GetAll()
+	if err != nil {
+		return nil, common.Errorf(http.StatusInternalServerError, "unable to read devices: %s", err)
+	}
+
+	timestamps := map[string]time.Time{}
+	for _, device := range devices {
+		data := device.Data()
+		if timestamp, ok := data["timestamp"].(time.Time); ok {
+			timestamps[device.Ref.ID] = timestamp
+		} else {
+			return nil, common.Errorf(
+				http.StatusInternalServerError,
+				"device %s has invalid timestamp: %v", device.Ref.ID, data["timestamp"])
+		}
+	}
+
+	return timestamps, nil
 }
 
 func GetNestUsers(ctx context.Context, app *firebase.App) (map[string]string, error) {
@@ -146,9 +183,16 @@ func LogFeatherData(ctx context.Context, app *firebase.App, key string, data map
 	}
 	defer client.Close()
 
+	// Save the data for the device itself.
+	_, err = client.Collection("device").Doc("feather").Set(ctx, data)
+	if err != nil {
+		return common.Errorf(http.StatusInternalServerError, "unable to write data to firestore: %s", err)
+	}
+
+	// Save the data to the running log.
 	_, err = client.Collection("device").Doc("feather").Collection("log").Doc(key).Set(ctx, data)
 	if err != nil {
-		return common.Errorf(http.StatusInternalServerError, "unable to write to firestore: %s", err)
+		return common.Errorf(http.StatusInternalServerError, "unable to write log to firestore: %s", err)
 	}
 
 	return nil

@@ -3,6 +3,7 @@ package main
 import (
 	"context"
 	"encoding/json"
+	"expvar"
 	"fmt"
 	"io/ioutil"
 	"log"
@@ -146,6 +147,9 @@ func LogNestData(ctx context.Context, app *firebase.App, key string) error {
 
 func main() {
 	cfg := relay.LoadConfig()
+	expvar.NewString("projectId").Set(cfg.ProjectID)
+	expvar.NewString("clientId").Set(cfg.ClientID)
 	app := relay.InitFirebase(cfg.ProjectID)
+	go relay.CheckupForever(app, cfg)
 	serve(8080, app, cfg)
 }
