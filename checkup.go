@@ -12,6 +12,7 @@ import (
 var (
 	checkupIntervalSeconds *expvar.Int    = expvar.NewInt("checkupIntervalSeconds")
 	lastCheckupTime        *expvar.String = expvar.NewString("lastCheckupTime")
+	mostRecentDeviceTime   *expvar.Map    = expvar.NewMap("mostRecentDeviceTime")
 )
 
 func Checkup(ctx context.Context, app *firebase.App) {
@@ -27,7 +28,11 @@ func Checkup(ctx context.Context, app *firebase.App) {
 	log.Printf("Device Timestamps: %v", timestamps)
 
 	now := time.Now().UTC()
+	mostRecentDeviceTime.Init()
 	for device, timestamp := range timestamps {
+		s := new(expvar.String)
+		s.Set(timestamp.Format(time.RFC3339))
+		mostRecentDeviceTime.Set(device, s)
 		timeSince := now.Sub(timestamp)
 		if timeSince.Hours() > 1 {
 			log.Printf("Device %s has not responded for >1 hour.", device)
