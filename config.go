@@ -12,6 +12,7 @@ type Config struct {
 	ClientSecret           string `json:"clientSecret"`           // The Nest client secret.
 	ProjectID              string `json:"projectId"`              // The Firebase project ID.
 	CheckupIntervalSeconds int    `json:"checkupIntervalSeconds"` // How long to wait between checkups.
+	StorageBucket          string `json:"storageBucket"`          // The Google Cloud Storage bucket.
 }
 
 func LoadConfig() *Config {

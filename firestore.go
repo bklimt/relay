@@ -198,9 +198,8 @@ func LogFeatherData(ctx context.Context, app *firebase.App, key string, data map
 	return nil
 }
 
-func InitFirebase(projectID string) *firebase.App {
+func InitFirebase(cfg *firebase.Config) *firebase.App {
 	ctx := context.Background()
-	cfg := &firebase.Config{ProjectID: projectID}
 	app, err := firebase.NewApp(ctx, cfg)
 	if err != nil {
 		log.Fatalf("error initializing firebase: %s", err)
